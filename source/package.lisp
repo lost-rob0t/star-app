@@ -4,4 +4,5 @@
   (:export
    #:*dtype-icon-alist*
    #:*keys-alist*
-   #:*icon-alist*))
+   #:*icon-alist*
+   #:main))
