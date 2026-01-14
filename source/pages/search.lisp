@@ -3,7 +3,7 @@
 (defclass search-app (star-app)
   ((current-query :accessor current-query :initform nil)
    (fts-bookmark :accessor fts-bookmark :initform nil)
-   (host :accessor app-host :initform "database.star.intel")
+   (host :accessor app-host :initform "127.0.0.1")
    (port :accessor app-port :initform 5000)))
 
 

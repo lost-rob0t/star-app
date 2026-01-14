@@ -25,7 +25,7 @@ The application features a dark electric neon synthwave theme with:
 ## Prerequisites
 
 - Nix with flakes enabled
-- StarIntel backend running (typically at `127.0.0.1:5000` or `database.star.intel:5000`)
+- StarIntel backend running (typically at `127.0.0.1:5000`)
 
 ## Running the Application
 
@@ -145,17 +145,13 @@ Star-App uses CLOG's event-driven model where:
 - WebSocket transport handles real-time communication
 - Each CLOG connection runs in its own thread
 
-See [CLAUDE.md](./CLAUDE.md) for detailed architecture documentation.
+See [CLAUDE.md](./CLAUDE.md) for Claude created summery.
 
-## Known Issues
-
-See [CLEANUP.md](./CLEANUP.md) for a detailed list of known issues and TODOs.
 
 ## Configuration
 
 The application expects the StarIntel backend at:
 - `127.0.0.1:5000` (default local)
-- `database.star.intel:5000` (remote)
 
 Modify `source/client.lisp` to change backend endpoints.
 
@@ -193,11 +189,4 @@ This is an experimental project. Code contributions should:
 
 ## License
 
-[License information to be added]
-
-## References
-
-- [CLOG Documentation](../clog/README.md)
-- [CLOG Manual](../clog/doc/clog-manual.html)
-- [Project Instructions](./CLAUDE.md)
-- [Cleanup Tasks](./CLEANUP.md)
+GPLv3

@@ -122,7 +122,7 @@ Each page follows this pattern:
 ### API Communication
 
 - Uses `starintel-gserver-client` for backend communication
-- Backend typically at `127.0.0.1:5000` or `database.star.intel:5000`
+- Backend typically at `127.0.0.1:5000` 
 - API client accessible via `(api-client *app*)`
 - HTTP requests via `dexador`
 - JSON parsing via `jsown`
