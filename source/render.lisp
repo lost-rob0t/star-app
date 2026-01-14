@@ -41,39 +41,7 @@
 
 
 
-(defparameter *document-types*
-  '(("target" . (("actor" . :text)
-                 ("target" . :text)
-                 ("delay" . :text)
-                 ("recurring" . :checkbox)
-                 ("options" . :textarea)))
-    ("person" . (("fname" . :text)
-                 ("mname" . :text)
-                 ("lname" . :text)
-                 ("bio" . :textarea)
-                 ("dob" . :date)
-                 ("region" . :text)))
-    ("org" . (("reg" . :text)
-              ("name" . :text)
-              ("bio" . :textarea)
-              ("country" . :text)
-              ("website" . :url)))
-    ("email" . (("user" . :email)
-                ("domain" . :text)
-                ("password" . :password)))
-    ("user" . (("url" . :url)
-               ("name" . :text)
-               ("platform" . :text)
-               ("bio" . :textarea)
-               ("misc" . :key-value)))
-    ("message" . (("content" . :textarea)
-                  ("platform" . :text)
-                  ("user" . :text)
-                  ("is-reply" . :checkbox)
-                  ("message-id" . :text)
-                  ("reply-to" . :text)
-                  ("group" . :text)
-                  ("channel" . :text)))))
+
 
 (defgeneric document-header (document)
   (:documentation "Define how to set the header phrase for a document element"))
@@ -124,56 +92,53 @@
             do (create-span card-footer :class "chip" :content chip)))
     card))
 
-(defgeneric document-render-search-result-small (document)
+(defgeneric document-render-search-result-small (document container)
   (:documentation "Render a small search result for the document"))
 
-(defgeneric document-render-search-result-large (document)
+(defgeneric document-render-search-result-large (document container)
   (:documentation "Render a large card-style search result for the document"))
 
-(defmethod document-render-search-result-small ((doc spec:message))
-  (lambda (container)
-    (create-search-result container
-                          :title (document-header doc)
-                          :subtitle (format nil "~A · ~A"
-                                            (spec:message-group doc)
-                                            (spec:message-channel doc))
-                          :content (spec:message-content doc)
-                          :icon-class "icon-message")))
+(defmethod document-render-search-result-small ((doc spec:message) container)
+  (create-search-result container
+                        :title (document-header doc)
+                        :subtitle (format nil "~A · ~A"
+                                          (spec:message-group doc)
+                                          (spec:message-channel doc))
+                        :content (spec:message-content doc)
+                        :icon-class "icon-message"))
 
-(defmethod document-render-search-result-large ((doc spec:message))
-  (lambda (container)
-    (let ((chips (list (spec:message-platform doc)
-                       (spec:message-group doc)
-                       (spec:message-channel doc))))
-      (when (spec:message-is-reply doc)
-        (push "Reply" chips))
-      (create-search-result-large
-       container
-       :title (document-header doc)
-       :subtitle (format nil "~A · ~A"
-                         (spec:message-group doc)
-                         (spec:message-channel doc))
-       :content (spec:message-content doc)
-       :icon-class "icon-message"
-       :chips chips))))
-
-(defmethod document-render-search-result-small ((doc spec:document))
-  (lambda (container)
-    (create-search-result container
-                          :title (document-header doc)
-                          :subtitle (format nil "Type: ~A" (spec:doc-type doc))
-                          :content "No preview available"
-                          :icon-class "icon-file")))
-
-(defmethod document-render-search-result-large ((doc spec:document))
-  (lambda (container)
+(defmethod document-render-search-result-large ((doc spec:message) container)
+  (let ((chips (list (spec:message-platform doc)
+                     (spec:message-group doc)
+                     (spec:message-channel doc))))
+    (when (spec:message-is-reply doc)
+      (push "Reply" chips))
     (create-search-result-large
      container
      :title (document-header doc)
-     :subtitle (format nil "Type: ~A" (spec:doc-type doc))
-     :content "No preview available"
-     :icon-class "icon-file"
-     :chips (list (spec:doc-type doc)))))
+     :subtitle (format nil "~A · ~A"
+                       (spec:message-group doc)
+                       (spec:message-channel doc))
+     :content (spec:message-content doc)
+     :icon-class "icon-message"
+     :chips chips)))
+
+(defmethod document-render-search-result-small ((doc spec:document) container)
+  (create-search-result container
+                        :title (document-header doc)
+                        :subtitle (format nil "Type: ~A" (spec:doc-type doc))
+                        :content "No preview available"
+                        :icon-class "icon-file"))
+
+(defmethod document-render-search-result-large ((doc spec:document) container)
+  (create-search-result-large
+   container
+   :title (document-header doc)
+   :subtitle (format nil "Type: ~A" (spec:doc-type doc))
+   :content "No preview available"
+   :icon-class "icon-file"
+   :chips (list (spec:doc-type doc))))
+
 
 
 (defmacro define-object-form ((class-name &key (bind-slots t)) &body forms)
@@ -187,3 +152,62 @@
                     :field-type ',(getf (cdr form) :field-type)
                     :parse-fn ,(getf (cdr form) :parse-fn `(lambda (value) value))
                     ,@(when bind-slots '(:bind t)))))))
+
+(defun create-key-val-input (form &optional (create-btn nil))
+  (let* ((group-input (create-div form :class "input-group"))
+         (key-input (create-form-element group-input "text" :class "form-input-sm form-inline"))
+         (val-input (create-form-element group-input "text" :class "form-input form-inline"))
+         (delete-key (when create-btn (create-button group-input :content "x" :class "btn btn-error input-group-brn form-inline")))
+         (add-new (when create-btn (create-button group-input :content "+" :class "btn btn-success input-group-brn form-inline"))))
+    group-input))
+
+(defun create-field-input (container field-name field-type &optional value)
+  (let* ((form-group (create-div container :class "form-group"))
+         (input (case field-type
+                  (:key-value (create-key-val-input form-group t))
+                  (:textarea (create-form-element form-group :textarea :placeholder field-name :value (or value "i") :class "form-input"))
+                  (:checkbox (progn
+                               (create-label form-group :content (string-capitalize field-name) :class "form-label")
+                               (create-form-element form-group :checkbox :placeholder field-name :checked (or value "") :class "form-checkbox")))
+                  (otherwise (create-form-element form-group field-type :placeholder field-name :value (or value "") :class "form-input")))))
+    (setf (attribute input "name") field-name)
+    input))
+
+
+
+
+(defun create-document-form (container doc-type &optional document (new-form t))
+  (let ((form (create-form container :class "form-horizontal"))
+        (fields (cdr (assoc doc-type *document-types* :test #'string=))))
+    (loop for field in fields
+          for slot-name = (getf field :slot-name)
+          for field-name = (getf field :field-name)
+          for field-type = (getf field :field-type)
+          for parse-fn = (getf field :parse-fn)
+          for value = (when document (slot-value document slot-name))
+          for input = (create-field-input form field-name field-type value)
+          do (when document
+               (log:info slot-name)
+               (log:info field-name)
+               (log:info field-type)
+               (log:info form)
+               ;; How bad is this?
+               (eval `(link-form-element-to-slot input document
+                       (lambda (obj) (slot-value ,obj ,slot-name))
+                       :transform ,parse-fn))))
+    (create-button form :content "Add Document" :class "btn btn-primary")
+    form))
+
+(defun create-document-card (container document)
+  (let* ((card (create-div container :class "card" :style "margin-bottom: 10px;"))
+         (card-header (create-div card :class "card-header"))
+         (card-body (create-div card :class "card-body" :style "display: none;"))
+         (form  (create-document-form card-body (spec:doc-type document) document)))
+
+    (set-on-click card-header
+                  (lambda (obj)
+                    (declare (ignore obj))
+                    (setf (style card-body "display")
+                          (if (string= (style card-body "display") "none")
+                              "block" "none"))))
+    card))

@@ -2,22 +2,41 @@
   "nodes": {
     "nixpkgs": {
       "locked": {
-        "lastModified": 1725578633,
-        "narHash": "sha256-y5+nkjmOXbLXBMZNqpR4WXbxBcG7ZpM09H6GCsoQcnk=",
+        "lastModified": 1768127708,
+        "narHash": "sha256-1Sm77VfZh3mU0F5OqKABNLWxOuDeHIlcFjsXeeiPazs=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "f1f436e5580d3f7173aaf567c104a2e313f117fb",
+        "rev": "ffbc9f8cbaacfb331b6017d5a5abb21a492c9a38",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "starintel-server": "starintel-server"
+      }
+    },
+    "starintel-server": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1768345240,
+        "narHash": "sha256-MgwpSo2YvKzD0OGgp0ehSFIUJhUBka/xY+EbrNnVfUM=",
+        "path": "/home/unseen/Documents/Projects/starintelV4/starintel-server",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/unseen/Documents/Projects/starintelV4/starintel-server",
+        "type": "path"
       }
     }
   },

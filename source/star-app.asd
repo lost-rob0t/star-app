@@ -6,12 +6,16 @@
   :license      "GNU GPL, version 3"
   :components   ((:file "package")
                  (:file "client")
+                 (:file "utils")
                  (:file "templates/base")
                  (:file "templates/nav")
                  (:file "render")
+                 (:file "components/input-autocomplete")
                  (:file "pages/editor")
                  (:file "pages/search")
                  (:file "pages/chat")
+                 (:file "pages/graph")
+                 (:file "pages/target-admin")
                  (:file "star-app"))
   :depends-on   (#:dexador
                  #:clog

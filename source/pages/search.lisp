@@ -3,8 +3,8 @@
 (defclass search-app (star-app)
   ((current-query :accessor current-query :initform nil)
    (fts-bookmark :accessor fts-bookmark :initform nil)
-   (host :accessor app-host :initform "127.0.0.1" :accessor app-host)
-   (port :accessor app-port :initform 5000 :accessor app-port)))
+   (host :accessor app-host :initform "database.star.intel")
+   (port :accessor app-port :initform 5000)))
 
 
 (defvar *search-app* (make-instance 'search-app))
@@ -52,9 +52,8 @@
   (on-page body "Search")
   (let* ((search-app *search-app*)
          (container (create-div body :class "container" :style "text-align: center;"))
-         (search-form (create-form container :method :get :action "http://127.0.0.1:5000/search" :class "input-group" :style "max-width: 500px; margin: 0 auto;"))
+         (search-form (create-form container :method :get :action (format nil "http://~a/~a/search" (app-host search-app) (app-port search-app)) :class "input-group" :style "max-width: 500px; margin: 0 auto;"))
          (search-input (create-form-element search-form :text :name "q" :placeholder (or (current-query search-app) "content:hello") :class "form-input" :html-id "search-bar"))
-         (search-button (create-button search-form :class "btn btn-primary input-group-btn" :content "Search"))
          (cols (create-div container :class "columns" :style "margin-top: 20px;"))
          (results-col (create-div cols :class "column col-9" :style "margin: 0 auto;"))
          (results (create-div results-col :class "container results-container"))
@@ -145,98 +144,6 @@
 
         card))))
 
-(defun render-doc (doc root-obj)
-  (let* ((dtype (string-downcase (jsown:val doc "dtype")))
-         (render-info (assoc dtype *dtype-icon-alist* :test #'equal))
-         (keys-info (cdr (assoc dtype *keys-alist* :test #'equal)))
-         (doc-render-keys (getf keys-info :doc-render)))
-    (when (and render-info keys-info)
-      (let* ((modal (create-div root-obj :class "modal active"))
-             (container (create-div modal :class "modal-container"))
-             (header (create-div container :class "modal-title h5" :content (format nil "Veiwing ~a" (jsown:val doc "_id"))))
-             (close (create-a header :class "btn btn-clear float-right" :content "close")))
-
-        (set-on-click close (lambda (obj)
-                              (setf (css-class-name obj) "modal")))
-        (create-div container :class "modal-body")
-        (search-apply #'render-doc-tiles doc root-obj *icon-alist* doc-render-keys)
-        modal))))
-
-(defun render-doc-tiles (doc root-obj icon-alist &rest keys)
-  (let* ((column1 (create-div root-obj :class "columns column col-6"))
-         (column2 (create-div root-obj :class "columns column col-6")))
-    (dolist (key keys)
-      (let ((value (string-downcase (jsown:val doc key))))
-        (when value
-          (log-console (clog:window root-obj) (cdr (assoc key icon-alist :test #'equal)))
-          (create-phrase column1 :i :style (cdr (assoc key icon-alist :test #'equal)))
-          (let* ((tile (create-div column2 :class "tile tile-centered"))
-                 (tile-content (create-div tile :class "tile-content")))
-            (create-span tile-content :class "tile-subtitle" :content value)
-            (create-div tile-content :class "tile-title" :content (str:title-case key))
-            tile))))))
-
-
-
-;; (defmethod query ((search-app search-app) query))
-
-(defvar *search-app* (make-instance 'search-app))
-
-(defun on-search-page (body)
-  (on-page body "Search")
-  (let* ((search-app *search-app*)
-         (container (create-div body :class "container" :style "text-align: center;"))
-         (search-form (create-form container :method :get :action "http://127.0.0.1:5000/search" :class "input-group" :style "max-width: 500px; margin: 0 auto;"))
-         (search-input (create-form-element search-form :text :name "q" :placeholder (or (current-query search-app) "content:hello") :class "form-input" :html-id "search-bar"))
-         (search-button (create-button search-form :class "btn btn-primary input-group-btn" :content "Search"))
-         (cols (create-div container :class "columns" :style "margin-top: 20px;"))
-         (results-col (create-div cols :class "column col-9" :style "margin: 0 auto;"))
-         (results (create-div results-col :class "container results-container"))
-         (load-more-button (create-button container :class "btn btn-primary" :content "Load More Results" :style "margin-top: 20px;")))
-
-    (when (current-query search-app)
-      (setf (text-value search-input) (current-query search-app)))
-
-    (set-on-submit search-form
-                   (lambda (obj)
-                     (declare (ignore obj))
-                     (let* ((query (clog:text-value search-input))
-                            (uri (quri:make-uri :host "127.0.0.1" :port 5000 :scheme "http" :path "/search" :query (quri:url-encode-params (list (cons "q" (or query "content:starintel")) '("limit" . 50)))))
-                            (response (dex:get uri))
-                            (parsed-response (jsown:parse response))
-                            (rows (jsown:val-safe parsed-response "rows"))
-                            (bookmark (jsown:val-safe parsed-response "bookmark")))
-
-                       ;; Clear previous results
-                       (setf (inner-html results-col) "")
-                       (setf results (create-div results-col :class "container results-container"))
-
-                       (setf (current-query search-app) query)
-                       (setf (fts-bookmark search-app) bookmark)
-                       (clog:log-console (clog:window body)
-                                         (format nil "url: ~a~%Results count:~a~%Bookmark: ~a~%Current query: ~a~%Search bar: ~a" uri  (length rows) (fts-bookmark search-app) (current-query search-app) query))
-                       (loop for row in rows
-                             for doc = (jsown:val row "doc")
-                             do (render-doc-result body doc results search-app))
-                       (force-output t))))
-
-    (set-on-click load-more-button
-                  (lambda (obj)
-                    (declare (ignore obj))
-                    (let* ((query (clog:value search-input))
-                           (uri (quri:make-uri :host "127.0.0.1" :port 5000 :scheme "http" :path "/search" :query (quri:url-encode-params (list (cons "q" query) '("limit" . 50) (cons "bookmark" (fts-bookmark search-app)) '("update" . "false")))))
-                           (response (dex:get uri))
-                           (parsed-response (jsown:parse response))
-                           (rows (jsown:val-safe parsed-response "rows"))
-                           (bookmark (or (jsown:val-safe parsed-response "bookmark") (fts-bookmark search-app))))
-
-                      (setf (fts-bookmark search-app) bookmark)
-                      (when rows
-                        (loop for row in rows
-                              for doc = (jsown:val row "doc")
-                              do (place-inside-bottom-of results  (render-doc-result body doc results search-app))))
-                      (force-output t))))
-    (run body)))
 
 
 

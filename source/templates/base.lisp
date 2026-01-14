@@ -8,6 +8,8 @@
   (load-css (html-document body) "https://unpkg.com/spectre.css/dist/spectre-exp.min.css")
   (load-css (html-document body) "https://unpkg.com/spectre.css/dist/spectre-icons.min.css")
   (load-css (html-document body) "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css")
+  ;;  TODO load custom css
+  (load-css (html-document body) "/css/synthwave.css")
   (setf (title (html-document body)) (format nil  "~a - ~a" *app-name* page-title)))
 
 
