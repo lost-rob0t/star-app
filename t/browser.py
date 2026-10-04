@@ -36,6 +36,8 @@ thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
 with socket.socket() as available:available.bind(('127.0.0.1',0));port=available.getsockname()[1]
 env=os.environ.copy();env.update(STAR_APP_PORT=str(port),STARINTEL_API_URL=f'http://127.0.0.1:{server.server_port}')
 env.pop('STAR_APP_OPEN_BROWSER',None)
+diagnostics={"console":[],"requestFailures":[],"pageErrors":[],"websocketFrames":[]}
+page=None
 with tempfile.TemporaryDirectory() as directory:
     log=Path(directory)/'application.log'
     with log.open('wb') as output:
@@ -53,7 +55,13 @@ with tempfile.TemporaryDirectory() as directory:
             with sync_playwright() as playwright:
                 browser=playwright.chromium.launch(executable_path=chromium,headless=True,
                           args=['--no-sandbox','--disable-dev-shm-usage'])
-                page=browser.new_page();errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
+                page=browser.new_page();errors=[]
+                page.on('pageerror',lambda error:(errors.append(str(error)),diagnostics['pageErrors'].append(str(error))))
+                page.on('console',lambda event:diagnostics['console'].append(event.text) if event.type=='error' else None)
+                page.on('requestfailed',lambda request:diagnostics['requestFailures'].append({'url':request.url,'failure':request.failure}))
+                def websocket_observer(websocket):
+                    websocket.on('framereceived',lambda frame:diagnostics['websocketFrames'].append(str(frame)[:300]) if len(diagnostics['websocketFrames'])<12 else None)
+                page.on('websocket',websocket_observer)
                 # Keep the fixture offline; presentation-only CDN styles aren't needed
                 # to validate CLOG transport, form controls or document semantics.
                 page.route('**/*',lambda route:route.continue_() if route.request.url.startswith(f'http://127.0.0.1:{port}/') else route.abort())
@@ -108,6 +116,10 @@ with tempfile.TemporaryDirectory() as directory:
             assert any(path=='/search' for path,_ in requests),requests
             print('installed executable + actual Chromium/CLOG WebSocket: all 60 source form fields; invalid/valid editor submission with false/null/empty evidence; canonical chat references/message and search; configured real HTTP client PASS')
         except BaseException:
+            if page is not None:
+                try:diagnostics['body']=page.locator('body').inner_text(timeout=1000)[:1500]
+                except Exception as error:diagnostics['bodyError']=str(error)[:500]
+            print(json.dumps(diagnostics),file=sys.stderr)
             print(log.read_text(errors='replace')[-6000:],file=sys.stderr);raise
         finally:
             if process.poll() is None:
