@@ -42,7 +42,7 @@ The application will start on port 2233 by default with routes:
 
 ### Testing
 
-Tests should be placed in `/t` directory at project root (currently no tests exist).
+Tests should be placed in `/t` directory at project root (canonical codec/HTTP/browser checks exist).
 
 ### Flake Outputs
 
@@ -125,7 +125,7 @@ Each page follows this pattern:
 - Backend typically at `127.0.0.1:5000` 
 - API client accessible via `(api-client *app*)`
 - HTTP requests via `dexador`
-- JSON parsing via `jsown`
+- Canonical JSON parsing and serialization via `com.inuoe.jzon`, validated through the generated `starintel.canonical` codec
 
 ### Styling
 
@@ -147,7 +147,7 @@ Helper functions:
 
 ## Dependencies
 
-**Upstream dependency**: `starintel-server` flake at `~/Documents/Projects/starintelV4/starintel-server`
+**Upstream dependency**: immutable `starintel-server` and `star-cl` revisions in `flake.nix`/`flake.lock`
 - Provides `starintel-gserver-client` library
 - Provides custom SBCL packages (star-cl, cl-couch, cl-gserver)
 
@@ -205,4 +205,4 @@ Helper functions:
 - Use `in-package` at top of each file
 - Event handlers often use `(declare (ignore obj))` when not using the event target
 - CLOG elements are created imperatively and assigned to let-bound variables
-- Backend responses are JSON parsed with `jsown:parse` and accessed with `jsown:val`
+- Canonical backend responses are parsed with `com.inuoe.jzon:parse` and accessed with `gethash`; retain false/null/empty values and validate documents through `starintel.canonical`

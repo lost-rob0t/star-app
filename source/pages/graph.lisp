@@ -12,7 +12,7 @@
 (defun on-graph-editor-page (body)
   (on-page body "Graph Editor")
   (let* ((container (create-div body :class "container"))
-         (canvas (create-canvas container :width 800 :height 600))
+         (canvas (create-div container :html-id "graph-container" :style "width: 800px; height: 600px;"))
          (new-doc-btn (create-button container :content "New Document" :class "btn btn-primary")))
 
     (js-execute body "
@@ -51,41 +51,17 @@
 
 (defun open-document-modal (body)
   (let* ((modal (create-div body :class "modal active"))
-         (modal-container (create-div modal :class "modal-container"))
-         (modal-body (create-div modal-container :class "modal-body"))
-         (form (create-form modal-body))
-         (type-select (create-select form))
-         (form-container (create-div form))
-         (submit-btn (create-button form :content "Create" :class "btn btn-primary")))
-
-    (place-inside-top-of modal-body (create-button form :content "Create" :class "btn btn-primary"))
-    (loop for doc-type in *document-types*
-          do (create-option type-select :content (car doc-type) :value (car doc-type)))
-
-    (flet ((update-form ()
-             (let* ((selected-type (value type-select))
-                    (document (make-instance (find-symbol (string-upcase selected-type) :spec))))
+         (container (create-div modal :class "modal-container"))
+         (type-select (create-document-type-select container))
+         (form-container (create-div container)))
+    (labels ((update-form ()
                (setf (inner-html form-container) "")
-               (create-document-form form-container selected-type document))))
-
-      (set-on-change type-select (lambda (obj) (declare (ignore obj)) (update-form)))
+               (create-document-form form-container (value type-select) nil t
+                 (lambda (document)
+                   (add-document-to-graph document)
+                   (setf (visiblep modal) nil)))))
       (update-form)
-
-      (set-on-click submit-btn
-                    (lambda (obj)
-                      (declare (ignore obj))
-                      (let* ((selected-type (value type-select))
-                             (document (make-instance (find-symbol (string-upcase selected-type) :spec))))
-                        (loop for input in (collect-children form-container)
-                              for name = (attribute input "name")
-                              for value = (value input)
-                              for slot = (find-symbol (string-upcase name) :spec)
-                              when slot
-                                do (setf (slot-value document slot) value))
-                        (add-document-to-graph document)
-                        (setf (visiblep modal) nil)))))
-
-    (setf (visiblep modal) t)))
+      (set-on-change type-select (lambda (obj) (declare (ignore obj)) (update-form))))))
 
 (defun add-document-to-graph (document)
   (let* ((id (spec:doc-id document))
@@ -112,7 +88,7 @@
          (modal-body (create-div modal-container :class "modal-body"))
          (close-btn (create-button modal-container :content "Close" :class "btn")))
 
-    (create-document-form modal-body (type-of document) document nil)
+    (create-document-form modal-body (spec:doc-type document) document nil)
 
     (set-on-click close-btn
                   (lambda (obj)
