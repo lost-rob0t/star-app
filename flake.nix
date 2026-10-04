@@ -63,7 +63,8 @@
           nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.playwright ])) pkgs.chromium ];
         } ''
           export XDG_CACHE_HOME="$TMPDIR/browser-cache"
-          mkdir -p "$XDG_CACHE_HOME"
+          export XDG_CONFIG_HOME="$TMPDIR/browser-config"
+          mkdir -p "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME"
           python3 ${self}/t/browser.py ${binary}/bin/star-app ${pkgs.chromium}/bin/chromium
           touch "$out"
         '';
