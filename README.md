@@ -11,16 +11,18 @@ A web-based UI for StarIntel, built using CLOG (Common Lisp Omnificent GUI). Thi
 - **Search Interface** (`/search`) - Full-text search with autocomplete
 - **Document Editor** (`/editor`) - Edit and manage documents
 - **Chat Viewer** (`/chat`) - View messages and conversations
-- **Graph Visualization** (`/graph`) - Network graph visualization
-- **Target Administration** (`/target-admin`) - Manage targets
+- **Graph Visualization** - Unregistered prototype
+- **Target Administration** - Unregistered prototype
 
-## Theme
+## Document contract
 
-The application features a dark electric neon synthwave theme with:
-- Deep dark blue/black gradients
-- Neon cyan and pink accents with glow effects
-- Purple glowing cards and borders
-- Smooth transitions and hover animations
+StarLang is the sole source of truth for document fields and validation. This consumer vendors the complete generated 0.10.1 release at immutable commit `765f1673851192bcaf1cdd2f35c47608f979b079`. Portable Nix inputs pin the server and maintained star-cl runtime; checks compare every release artifact across the application, actual CL runtime, and server client.
+
+The UI instantiates the actual generated Common Lisp structs through `starintel.canonical`, with presentation wrappers for CLOG rendering. Form fields and available document types come from the generated schema, rather than a local model package. Canonical `id`, `schemaVersion`, `createdAt`, `updatedAt`, Message `message`, and qualified reference objects are used throughout. False, null, empty arrays, decimal strings, omitted optional fields, and opaque extensions survive roundtrips. Invalid documents are rejected before HTTP submission.
+
+The editor validates and retains documents in its existing local collection; adding a card does not persist a document to the backend. `submit-canonical-document` uses the maintained HTTP client and validated canonical JSON when explicit application code submits a document. The graph prototype remains unregistered, and chat remains a viewer.
+
+Full Nix validation builds the entire library and saved executable, exercises all 60 generated document types and typed forms against a real HTTP endpoint, and launches the installed executable in Chromium over actual CLOG WebSockets. Browser checks cover all source-defined form fields, rejected/valid editor submissions, exact false/null/empty extension values, canonical chat references/content, and search. The fixture runs offline and does not assess CDN styling. The Nix dependency source contains a narrow SBCL readtable-iterator compatibility patch; it tests macro characters through the public accessor and preserves the runtime source used by ASDF.
 
 ## Prerequisites
 
@@ -43,14 +45,12 @@ sbcl
 (star.app:main)
 ```
 
-The application will start on **port 2233** and automatically open your browser.
+The application will start on **port 2233** and open a browser when `STAR_APP_OPEN_BROWSER` is set.
 
 Access the application at:
 - http://localhost:2233/search
 - http://localhost:2233/editor
 - http://localhost:2233/chat
-- http://localhost:2233/graph
-- http://localhost:2233/target-admin
 
 ### One-Liner Start
 
@@ -75,7 +75,9 @@ nix build
 ```
 source/
 ├── package.lisp              # Package definition and exports
-├── client.lisp               # API client wrapper, JSON utilities
+├── documents.lisp            # Presentation wrappers over generated bindings
+├── contract.lisp             # Source-defined fields and typed form projection
+├── client.lisp               # Maintained HTTP client and canonical codec
 ├── utils.lisp               # Utility functions
 ├── render.lisp              # Document rendering generics
 ├── templates/
@@ -91,10 +93,6 @@ source/
 │   └── target-admin.lisp    # Target administration
 ├── run.lisp                 # Runtime utilities
 └── star-app.lisp            # Main entry point, route setup
-
-static/
-└── css/
-    └── synthwave.css        # Custom synthwave theme
 ```
 
 ### Reloading Changes
@@ -116,7 +114,8 @@ Note: You may need to kill the old process first if port 2233 is already in use.
 Tests should be placed in the `/t` directory at project root.
 
 ```bash
-# TODO: No tests currently exist
+python3 scripts/sync-starintel-schema.py
+nix flake check -L
 ```
 
 ## Dependencies
@@ -128,7 +127,9 @@ This project uses Nix flakes for reproducible builds. All dependencies are manag
 - `clack` + `clack-handler-hunchentoot` - Web server
 - `hunchentoot` - HTTP server
 - `dexador` - HTTP client
-- `jsown` - JSON parser
+- `com.inuoe.jzon` - Lossless canonical JSON parser
+- `starintel-0101` - StarLang-generated document bindings and validator
+- `jsown` - Existing graph presentation helpers
 - `log4cl` - Logging
 - `str` - String utilities
 - `serapeum` - Utility library
@@ -153,7 +154,7 @@ See [CLAUDE.md](./CLAUDE.md) for Claude created summery.
 The application expects the StarIntel backend at:
 - `127.0.0.1:5000` (default local)
 
-Modify `source/client.lisp` to change backend endpoints.
+Set `STARINTEL_API_URL` at launch to choose the backend and `STARINTEL_API_KEY` to use an API credential. `STAR_APP_PORT` selects the UI port; `STAR_APP_OPEN_BROWSER` opts into opening a browser. Configuration is applied at launch, including in the saved executable.
 
 ## Troubleshooting
 
@@ -171,7 +172,7 @@ kill -9 <PID>
 
 ### Static Files Not Loading
 
-Ensure the `static/` directory exists and contains the CSS files. The static root is configured in `source/star-app.lisp`.
+The installed application serves the pinned CLOG bootstrap and JavaScript assets. Presentation styles are loaded from the existing CDN URLs.
 
 ### WebSocket Connection Issues
 

@@ -20,23 +20,22 @@
     ("email" . "bi bi-envelope-fill")
     ("user" . "bi bi-person-vcard-fill")))
 
-(defparameter *keys-alist*
-  '(("user" . (:doc-render ("dateAdded" "dataset" "name" "url" "platform")
-               :result-chips ("dateUpdated" "platform" "dataset")
-               :result ("bio")))
-    ("socialmpost" . (:doc-render ("dateAdded" "dataset" "user" "group" "channel" "content")
-                      :result-chips ("dateUpdated" "platform" "group" "user")
-                      :result ("content")))
-    ("message" . (:doc-render ("dateAdded" "dataset" "user" "group" "channel" "content")
-                  :result-chips ("dateUpdated" "platform" "group" "channel" "user")
-                  :result ("content")))))
+(setf *dtype-icon-alist*
+      (loop for dtype in (starintel.canonical:document-types)
+            collect (cons dtype (or (cdr (assoc dtype *dtype-icon-alist* :test #'equal))
+                                    "bi bi-file-text-fill"))))
 
+(defparameter *keys-alist*
+  (loop for (dtype . fields) in *document-types*
+        for names = (mapcar (lambda (field) (getf field :field-name)) fields)
+        collect (cons dtype (list :doc-render names :result names
+                                  :result-chips '("dataset" "updatedAt")))))
 
 (defparameter *icon-alist* '(("content" . "bi bi-chat-left-dots-fill")
                              ("user" . "bi bi-person-vcard-fill")
                              ("dataset" . "bi bi-database-fill")
-                             ("dateAdded" . "bi bi-calendar-event-fill")
-                             ("dateUpdated" . "bi bi-calendar-event-fill")
+                             ("createdAt" . "bi bi-calendar-event-fill")
+                             ("updatedAt" . "bi bi-calendar-event-fill")
                              ("group" . "bi bi-people-fill")))
 
 
@@ -73,6 +72,9 @@
             do (create-span card-footer :class "chip" :content chip)))
     card))
 
+
+(defun create-search-result (container &rest arguments)
+  (apply #'create-card container arguments))
 
 (defun create-search-result-large (container &key title subtitle content class icon-class chips)
   (let* ((card (create-div container :class (format nil "card ~A" (or class ""))))
@@ -141,73 +143,46 @@
 
 
 
-(defmacro define-object-form ((class-name &key (bind-slots t)) &body forms)
-  `(cons ,(symbol-name class-name)
-    (list
-     ,@(loop for form in forms
-             collect
-             `(list :slot-name ',(car form)
-                    :field-name ,(or (getf (cdr form) :field-name)
-                                     (string-capitalize (symbol-name (car form))))
-                    :field-type ',(getf (cdr form) :field-type)
-                    :parse-fn ,(getf (cdr form) :parse-fn `(lambda (value) value))
-                    ,@(when bind-slots '(:bind t)))))))
+(defmethod document-header ((document spec:document))
+  (format nil "~a: ~a" (spec:doc-type document) (spec:doc-id document)))
 
-(defun create-key-val-input (form &optional (create-btn nil))
-  (let* ((group-input (create-div form :class "input-group"))
-         (key-input (create-form-element group-input "text" :class "form-input-sm form-inline"))
-         (val-input (create-form-element group-input "text" :class "form-input form-inline"))
-         (delete-key (when create-btn (create-button group-input :content "x" :class "btn btn-error input-group-brn form-inline")))
-         (add-new (when create-btn (create-button group-input :content "+" :class "btn btn-success input-group-brn form-inline"))))
-    group-input))
-
-(defun create-field-input (container field-name field-type &optional value)
-  (let* ((form-group (create-div container :class "form-group"))
-         (input (case field-type
-                  (:key-value (create-key-val-input form-group t))
-                  (:textarea (create-form-element form-group :textarea :placeholder field-name :value (or value "i") :class "form-input"))
-                  (:checkbox (progn
-                               (create-label form-group :content (string-capitalize field-name) :class "form-label")
-                               (create-form-element form-group :checkbox :placeholder field-name :checked (or value "") :class "form-checkbox")))
-                  (otherwise (create-form-element form-group field-type :placeholder field-name :value (or value "") :class "form-input")))))
-    (setf (attribute input "name") field-name)
-    input))
-
-
-
-
-(defun create-document-form (container doc-type &optional document (new-form t))
+(defun create-document-form (container dtype &optional document (editable t) on-document)
   (let ((form (create-form container :class "form-horizontal"))
-        (fields (cdr (assoc doc-type *document-types* :test #'string=))))
-    (loop for field in fields
-          for slot-name = (getf field :slot-name)
-          for field-name = (getf field :field-name)
-          for field-type = (getf field :field-type)
-          for parse-fn = (getf field :parse-fn)
-          for value = (when document (slot-value document slot-name))
-          for input = (create-field-input form field-name field-type value)
-          do (when document
-               (log:info slot-name)
-               (log:info field-name)
-               (log:info field-type)
-               (log:info form)
-               ;; How bad is this?
-               (eval `(link-form-element-to-slot input document
-                       (lambda (obj) (slot-value ,obj ,slot-name))
-                       :transform ,parse-fn))))
-    (create-button form :content "Add Document" :class "btn btn-primary")
+        (inputs nil)
+        (status (create-div container :class "toast")))
+    (dolist (field (document-fields dtype))
+      (let* ((name (getf field :field-name))
+             (type (field-value-type (getf field :contract)))
+             (fixed (member name '("dtype" "schemaVersion") :test #'equal))
+             (wire (when document (as-json document)))
+             (value (cond (fixed (if (equal name "dtype") dtype (starintel.canonical:schema-version)))
+                          (wire (multiple-value-bind (value present) (gethash name wire)
+                                  (when present (if (equal type "string") value
+                                                    (com.inuoe.jzon:stringify value)))))
+                          (t "")))
+             (group (create-div form :class "form-group")))
+        (create-label group :content (format nil "~a~a" name (if (getf field :required) " *" "")))
+        (let ((input (create-form-element group
+                         (if (equal type "string") :text :textarea)
+                         :class "form-input" :name name :value (or value "")
+                         :placeholder (if (equal type "string") name "JSON value"))))
+          (when (or fixed (not editable)) (setf (attribute input "readonly") "readonly"))
+          (push (cons name input) inputs))))
+    (when editable
+      (create-button form :content "Add Document" :class "btn btn-primary")
+      (set-on-submit form
+        (lambda (obj)
+          (declare (ignore obj))
+          (handler-case
+              (let ((result (document-from-fields dtype
+                              (mapcar (lambda (input) (cons (car input) (value (cdr input)))) inputs))))
+                (setf (text status) "Document validated")
+                (when on-document (funcall on-document result)))
+            (error (condition) (setf (text status) (princ-to-string condition)))))))
     form))
 
 (defun create-document-card (container document)
-  (let* ((card (create-div container :class "card" :style "margin-bottom: 10px;"))
-         (card-header (create-div card :class "card-header"))
-         (card-body (create-div card :class "card-body" :style "display: none;"))
-         (form  (create-document-form card-body (spec:doc-type document) document)))
-
-    (set-on-click card-header
-                  (lambda (obj)
-                    (declare (ignore obj))
-                    (setf (style card-body "display")
-                          (if (string= (style card-body "display") "none")
-                              "block" "none"))))
+  (let ((card (create-div container :class "card")))
+    (create-div card :class "card-header" :content (document-header document))
+    (create-document-form card (spec:doc-type document) document nil)
     card))

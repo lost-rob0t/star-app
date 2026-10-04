@@ -4,8 +4,10 @@
   :author       " <unseen@flake>"
   :serial       t
   :license      "GNU GPL, version 3"
-  :components   ((:file "package")
+  :components   ((:file "documents")
+                 (:file "package")
                  (:file "client")
+                 (:file "contract")
                  (:file "utils")
                  (:file "templates/base")
                  (:file "templates/nav")
@@ -19,7 +21,10 @@
                  (:file "star-app"))
   :depends-on   (#:dexador
                  #:clog
-                 #:starintel
+                 #:starintel-0101
+                 #:com.inuoe.jzon
+                 #:serapeum
+                 #:local-time
                  #:jsown
                  #:log4cl
                  #:str

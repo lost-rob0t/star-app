@@ -29,17 +29,16 @@
                  :content (if (= 0 (length (spec:message-content doc))) "No Content" (spec:message-content doc))
                  :icon-class "icon-message")))
 
-(defun fetch-groups (app &key (group-name nil))
+(defun fetch-groups (app &key group-name)
+  (clrhash (chat-groups app))
   (loop for skip from 0 by 100
-        for result = (jsown:parse (if group-name
-                                      (star.api.client:groups (api-client app) :start-key group-name :limit 100 :skip skip)
-                                      (star.api.client:groups (api-client app) :limit 100 :skip skip)))
-        while (car (jsown:val-safe result "result"))
-        do (log:info result)
-        do
-           (mapcar (lambda (x)
-                     (setf (chat-groups app) (serapeum:dict* (chat-groups app) (jsown:val x "key") (remove-duplicates (jsown:val x "value") )))) result)))
-
+        for rows = (com.inuoe.jzon:parse
+                     (groups (api-client app) :start-key group-name :limit 100 :skip skip))
+        while (plusp (length rows))
+        do (loop for row across rows
+                 do (setf (gethash (gethash "key" row) (chat-groups app))
+                          (remove-duplicates (coerce (gethash "value" row) 'list) :test #'equal))))
+  (chat-groups app))
 
 (defun fetch-channels (app group)
   (remove-duplicates (serapeum:@ (chat-groups app) group) :test #'string=))
@@ -47,7 +46,7 @@
 (defun fetch-messages (app group channel &key (limit 200) (start-key nil))
   (setf (chat-messages app)
 
-        (loop for doc in (jsown:parse (messages-by-channel (api-client app) group channel
+        (loop for doc across (com.inuoe.jzon:parse (messages-by-channel (api-client app) group channel
                                                            :limit limit
                                                            :start-key start-key))
               collect (from-json doc 'spec:message))))
@@ -107,29 +106,19 @@
 
              (fetch-new-messages ()
                (when (and (current-group app) (current-channel app))
-                 (let* ((messages (fetch-messages (api-client app)
-                                                  (getf (current-group app) :id)
-                                                  (getf (current-channel app) :id)
-                                                  :limit 200
-                                                  :start-key (last-message-id app)))
-                        (new-messages (remove-if (lambda (msg)
-                                                   (member msg (gethash (current-channel app) (chat-messages app))
-                                                           :test #'string=
-                                                           :key #'spec:doc-id))
-                                                 messages)))
-                   (when new-messages
-                     (setf (gethash (list (current-group app) (current-channel app)) (chat-messages app))
-                           (append (gethash (list (current-group app) (current-channel app)) (chat-messages app))
-                                   new-messages))
-                     (setf (last-message-id app) (spec:doc-id (first new-messages)))
-                     (render-messages))))))
+                 (fetch-messages app (current-group app) (current-channel app)
+                                 :limit 200 :start-key (last-message-id app))
+                 (when (chat-messages app)
+                   (setf (last-message-id app) (spec:doc-id (car (last (chat-messages app))))))
+                 (render-messages))))
 
       (render-groups)
 
       (set-on-input group-filter
                     (lambda (obj)
                       (let ((filter-text (value obj)))
-                        (fetch-groups app :group-name filter-text))))
+                        (fetch-groups app :group-name filter-text)
+                        (render-groups))))
       ;; (loop for child across (children group-list)
       ;;       do (setf (style child "display")
       ;;                (if (search filter-text (inner-html child) :test #'char-equal)

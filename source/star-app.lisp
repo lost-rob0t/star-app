@@ -1,15 +1,17 @@
 (in-package :star.app)
 
 (defun main ()
-  (initialize 'on-search-page
-              :port 2233
-              :static-root (merge-pathnames "static/"
-                                           (asdf:system-source-directory :star-app)))
-  (set-on-new-window 'on-search-page :path "/search")
-  (initialize 'on-document-editor :port 2233)
-  (set-on-new-window 'on-document-editor :path "/editor")
-  (initialize 'on-chat-view :port 2233)
-  (set-on-new-window 'on-chat-view :path "/chat")
-  (open-browser)
-  ;; Keep the server running
-  (loop (sleep 1)))
+  (let* ((port (parse-integer (or (uiop:getenv "STAR_APP_PORT") "2233")))
+         (client (make-star-client :base-url (or (uiop:getenv "STARINTEL_API_URL") "http://127.0.0.1:5000")))
+         (api-key (uiop:getenv "STARINTEL_API_KEY")))
+    (when (and api-key (plusp (length api-key)))
+      (setf client (client-with-api-key client api-key)))
+    ;; Configure the saved application's clients at launch, not image-build time.
+    (dolist (app (list *app* *search-app* *editor-app* *chat-app* *graph-editor*))
+      (setf (api-client app) client))
+    (initialize 'on-search-page :port port)
+    (set-on-new-window 'on-search-page :path "/search")
+    (set-on-new-window 'on-document-editor :path "/editor")
+    (set-on-new-window 'on-chat-view :path "/chat")
+    (when (uiop:getenv "STAR_APP_OPEN_BROWSER") (open-browser))
+    (loop (sleep 1))))

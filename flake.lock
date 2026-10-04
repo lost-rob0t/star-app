@@ -1,42 +1,127 @@
 {
   "nodes": {
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1768127708,
-        "narHash": "sha256-1Sm77VfZh3mU0F5OqKABNLWxOuDeHIlcFjsXeeiPazs=",
+        "lastModified": 1770115704,
+        "narHash": "sha256-KHFT9UWOF2yRPlAnSXQJh6uVcgNcWlFqqiAZ7OVlHNc=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "ffbc9f8cbaacfb331b6017d5a5abb21a492c9a38",
+        "rev": "e6eae2ee2110f3d31110d5c222cd395303343b08",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
-        "ref": "nixos-unstable",
         "repo": "nixpkgs",
+        "rev": "e6eae2ee2110f3d31110d5c222cd395303343b08",
         "type": "github"
+      }
+    },
+    "org-doc": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "starintel-server",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1788713659,
+        "narHash": "sha256-qdLRplFQF4unYorl9KHtZx/Pv0sA/obZ0XudYiVJ1kc=",
+        "ref": "refs/heads/master",
+        "rev": "5bdb907a6dfbfdac594d661e0f475b5e65581ed2",
+        "revCount": 7,
+        "type": "git",
+        "url": "https://git.starintel.actor/nsaspy/org-doc"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://git.starintel.actor/nsaspy/org-doc"
       }
     },
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
+        "star-cl": "star-cl",
         "starintel-server": "starintel-server"
       }
     },
-    "starintel-server": {
+    "star-cl": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1768345240,
-        "narHash": "sha256-MgwpSo2YvKzD0OGgp0ehSFIUJhUBka/xY+EbrNnVfUM=",
-        "path": "/home/unseen/Documents/Projects/starintelV4/starintel-server",
-        "type": "path"
+        "lastModified": 1791058345,
+        "narHash": "sha256-9LXGwo4wOWfcxk+67i4ZyZ4KsPMzuEx5DKpN+0F+HiQ=",
+        "owner": "lost-rob0t",
+        "repo": "star-cl",
+        "rev": "a18a6cddcbcf4d989495a5de8abcedc4d0294d1c",
+        "type": "github"
       },
       "original": {
-        "path": "/home/unseen/Documents/Projects/starintelV4/starintel-server",
-        "type": "path"
+        "owner": "lost-rob0t",
+        "repo": "star-cl",
+        "rev": "a18a6cddcbcf4d989495a5de8abcedc4d0294d1c",
+        "type": "github"
+      }
+    },
+    "starintel-server": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "org-doc": "org-doc",
+        "star-cl": [
+          "star-cl"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791081261,
+        "narHash": "sha256-OgodLvURy0KQNUNQHcDTlWfCkTntcLfbjASQ9okPlVY=",
+        "owner": "lost-rob0t",
+        "repo": "starintel-server",
+        "rev": "117057d6f5bbf2e2b40d5cfd89eb7adcca5e28fd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lost-rob0t",
+        "repo": "starintel-server",
+        "rev": "117057d6f5bbf2e2b40d5cfd89eb7adcca5e28fd",
+        "type": "github"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
       }
     }
   },
