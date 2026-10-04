@@ -60,12 +60,14 @@
       packages.${system} = { default = binary; star-app-lib = star-app; sbcl-wrapped = sbcl-wrapped; };
       checks.${system} = {
         browser = pkgs.runCommand "star-app-installed-browser" {
-          nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.playwright ])) pkgs.chromium ];
+          nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.playwright ])) ];
         } ''
           export XDG_CACHE_HOME="$TMPDIR/browser-cache"
           export XDG_CONFIG_HOME="$TMPDIR/browser-config"
           mkdir -p "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME"
-          python3 ${self}/t/browser.py ${binary}/bin/star-app ${pkgs.chromium}/bin/chromium
+          # Match the Chromium build to the pinned Playwright driver.
+          timeout --kill-after=5s 300s python3 ${self}/t/browser.py ${binary}/bin/star-app \
+            ${pkgs.playwright-driver.components.chromium}/chrome-linux64/chrome
           touch "$out"
         '';
         application = binary;
