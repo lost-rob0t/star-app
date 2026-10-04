@@ -21,6 +21,7 @@
                  (:file "star-app"))
   :depends-on   (#:dexador
                  #:clog
+                 #:clack-handler-hunchentoot
                  #:starintel-0101
                  #:com.inuoe.jzon
                  #:serapeum
