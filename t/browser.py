@@ -36,7 +36,7 @@ thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
 with socket.socket() as available:available.bind(('127.0.0.1',0));port=available.getsockname()[1]
 env=os.environ.copy();env.update(STAR_APP_PORT=str(port),STARINTEL_API_URL=f'http://127.0.0.1:{server.server_port}')
 env.pop('STAR_APP_OPEN_BROWSER',None)
-diagnostics={"console":[],"requestFailures":[],"pageErrors":[],"websocketFrames":[]}
+diagnostics={"console":[],"requestFailures":[],"pageErrors":[],"websocketFrames":[],"websocketSent":[]}
 page=None
 with tempfile.TemporaryDirectory() as directory:
     log=Path(directory)/'application.log'
@@ -60,14 +60,22 @@ with tempfile.TemporaryDirectory() as directory:
                 page.on('console',lambda event:diagnostics['console'].append(event.text) if event.type=='error' else None)
                 page.on('requestfailed',lambda request:diagnostics['requestFailures'].append({'url':request.url,'failure':request.failure}))
                 def websocket_observer(websocket):
-                    websocket.on('framereceived',lambda frame:diagnostics['websocketFrames'].append(str(frame)[:300]) if len(diagnostics['websocketFrames'])<12 else None)
+                    def record_frame(key,frame):
+                        diagnostics[key].append(str(frame)[:300])
+                        del diagnostics[key][:-20]
+                    websocket.on('framereceived',lambda frame:record_frame('websocketFrames',frame))
+                    websocket.on('framesent',lambda frame:record_frame('websocketSent',frame))
                 page.on('websocket',websocket_observer)
                 # Keep the fixture offline; presentation-only CDN styles aren't needed
                 # to validate CLOG transport, form controls or document semantics.
                 page.route('**/*',lambda route:route.continue_() if route.request.url.startswith(f'http://127.0.0.1:{port}/') else route.abort())
                 page.goto(f'http://127.0.0.1:{port}/editor')
                 selector=page.locator('select.form-select')
-                expect(selector).to_be_visible(timeout=15000)
+                try:
+                    expect(selector).to_be_visible(timeout=15000)
+                except Exception:
+                    diagnostics['body']=page.locator('body').inner_text(timeout=1000)[:1500]
+                    raise
                 # CLOG creates controls before registering their server callbacks.
                 # Wait for the actual change handler instead of racing page startup.
                 page.wait_for_function("""() => {
