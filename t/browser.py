@@ -74,7 +74,12 @@ with tempfile.TemporaryDirectory() as directory:
                 try:
                     expect(selector).to_be_visible(timeout=15000)
                 except Exception:
-                    diagnostics['body']=page.locator('body').inner_text(timeout=1000)[:1500]
+                    diagnostics['dom']=page.evaluate("""() => ({
+                        url: location.href,
+                        html: document.documentElement.outerHTML.slice(0,4000),
+                        selects: document.querySelectorAll('select.form-select').length,
+                        bodies: document.querySelectorAll('body').length
+                    })""")
                     raise
                 # CLOG creates controls before registering their server callbacks.
                 # Wait for the actual change handler instead of racing page startup.
